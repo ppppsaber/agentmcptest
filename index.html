@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易记账本</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; margin: 20px 0; color: #2c3e50; }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+        .form-row input, .form-row select {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 120px;
+        }
+        .form-row input:focus, .form-row select:focus { outline: none; border-color: #3498db; }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn-primary { background: #3498db; color: #fff; }
+        .btn-danger { background: #e74c3c; color: #fff; }
+        .btn-warning { background: #f39c12; color: #fff; }
+        .stats { display: flex; gap: 12px; margin-bottom: 16px; }
+        .stat-card {
+            flex: 1;
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .stat-card .label { font-size: 12px; color: #999; margin-bottom: 4px; }
+        .stat-card .value { font-size: 20px; font-weight: bold; }
+        .stat-card.income .value { color: #27ae60; }
+        .stat-card.expense .value { color: #e74c3c; }
+        .stat-card.balance .value { color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { color: #999; font-weight: 500; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .tag-income { background: #e8f8f0; color: #27ae60; }
+        .tag-expense { background: #fde8e8; color: #e74c3c; }
+        .empty { text-align: center; color: #ccc; padding: 30px; }
+        .actions { display: flex; gap: 6px; }
+        .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+        .filter-bar select { padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
+        @media (max-width: 480px) {
+            .stats { flex-direction: column; }
+            .form-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📒 简易记账本</h1>
+
+    <div class="stats">
+        <div class="stat-card income">
+            <div class="label">总收入</div>
+            <div class="value" id="totalIncome">¥0.00</div>
+        </div>
+        <div class="stat-card expense">
+            <div class="label">总支出</div>
+            <div class="value" id="totalExpense">¥0.00</div>
+        </div>
+        <div class="stat-card balance">
+            <div class="label">结余</div>
+            <div class="value" id="balance">¥0.00</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="form-row">
+            <select id="type">
+                <option value="expense">支出</option>
+                <option value="income">收入</option>
+            </select>
+            <input type="number" id="amount" placeholder="金额" step="0.01" min="0">
+            <select id="category">
+                <option value="餐饮">餐饮</option>
+                <option value="交通">交通</option>
+                <option value="购物">购物</option>
+                <option value="娱乐">娱乐</option>
+                <option value="住房">住房</option>
+                <option value="医疗">医疗</option>
+                <option value="教育">教育</option>
+                <option value="工资">工资</option>
+                <option value="其他">其他</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <input type="text" id="note" placeholder="备注（可选）" style="flex: 2">
+            <button class="btn btn-primary" onclick="addRecord()">添加记录</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="filter-bar">
+            <select id="filterType" onchange="render()">
+                <option value="all">全部类型</option>
+                <option value="income">仅收入</option>
+                <option value="expense">仅支出</option>
+            </select>
+            <select id="filterCategory" onchange="render()">
+                <option value="all">全部分类</option>
+            </select>
+            <button class="btn btn-warning" onclick="exportData()" style="margin-left:auto">导出CSV</button>
+            <button class="btn btn-danger" onclick="clearAll()">清空</button>
+        </div>
+        <table>
+            <thead>
+                <tr><th>日期</th><th>类型</th><th>分类</th><th>金额</th><th>备注</th><th>操作</th></tr>
+            </thead>
+            <tbody id="recordsBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'accounting_records';
+let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
+
+function formatDate(ts) {
+    const d = new Date(ts);
+    return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function formatMoney(v) { return '¥' + Math.abs(v).toFixed(2); }
+
+function addRecord() {
+    const type = document.getElementById('type').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const category = document.getElementById('category').value;
+    const note = document.getElementById('note').value;
+    if (!amount || amount <= 0) { alert('请输入有效金额'); return; }
+    records.unshift({
+        id: Date.now(),
+        type, amount, category, note,
+        time: Date.now()
+    });
+    save();
+    document.getElementById('amount').value = '';
+    document.getElementById('note').value = '';
+    render();
+}
+
+function deleteRecord(id) {
+    records = records.filter(r => r.id !== id);
+    save();
+    render();
+}
+
+function clearAll() {
+    if (!confirm('确定清空所有记录？')) return;
+    records = [];
+    save();
+    render();
+}
+
+function getFiltered() {
+    const ft = document.getElementById('filterType').value;
+    const fc = document.getElementById('filterCategory').value;
+    return records.filter(r =>
+        (ft === 'all' || r.type === ft) &&
+        (fc === 'all' || r.category === fc)
+    );
+}
+
+function render() {
+    const filtered = getFiltered();
+    const tbody = document.getElementById('recordsBody');
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无记录，开始记账吧！</td></tr>';
+    } else {
+        tbody.innerHTML = filtered.map(r => `
+            <tr>
+                <td>${formatDate(r.time)}</td>
+                <td><span class="tag tag-${r.type}">${r.type === 'income' ? '收入' : '支出'}</span></td>
+                <td>${r.category}</td>
+                <td style="color:${r.type === 'income' ? '#27ae60' : '#e74c3c'}">${r.type === 'income' ? '+' : '-'}${formatMoney(r.amount)}</td>
+                <td>${r.note || '-'}</td>
+                <td><div class="actions"><button class="btn btn-danger" style="padding:4px 10px" onclick="deleteRecord(${r.id})">删</button></div></td>
+            </tr>
+        `).join('');
+    }
+    const income = records.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0);
+    const expense = records.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
+    document.getElementById('totalIncome').textContent = formatMoney(income);
+    document.getElementById('totalExpense').textContent = formatMoney(expense);
+    document.getElementById('balance').textContent = formatMoney(income - expense);
+    const cats = [...new Set(records.map(r => r.category))];
+    const filterCat = document.getElementById('filterCategory');
+    const current = filterCat.value;
+    filterCat.innerHTML = '<option value="all">全部分类</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    filterCat.value = current;
+}
+
+function exportData() {
+    if (records.length === 0) { alert('暂无数据可导出'); return; }
+    const csv = '日期,类型,分类,金额,备注\n' + records.map(r =>
+        `${new Date(r.time).toLocaleString()},${r.type === 'income' ? '收入' : '支出'},${r.category},${r.amount},${r.note || ''}`
+    ).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `记账记录_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+}
+
+render();
+</script>
+</body>
+</html>

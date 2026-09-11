@@ -1,52 +1,25 @@
-# 记账小工具 (Personal Bookkeeping Tool)
+# 简易记账本
 
-一个轻量级的 Python 命令行记账工具，支持记录收入/支出、查看流水、统计汇总、分类管理。
+一个纯前端的轻量记账小工具，无需后端，数据存储在浏览器 localStorage 中。
 
 ## 功能
 
-- ✅ 添加收入/支出记录
-- ✅ 查看所有流水记录
-- ✅ 按月份/分类统计
-- ✅ 删除记录
-- ✅ 数据持久化（JSON 存储）
-- ✅ 导出 CSV
+- 💰 **收支记录**：支持收入/支出两种类型
+- 📊 **实时统计**：总收入、总支出、结余一目了然
+- 🏷️ **分类管理**：餐饮、交通、购物、娱乐、住房、医疗、教育、工资等
+- 🔍 **筛选过滤**：按类型、分类筛选记录
+- 📤 **导出 CSV**：一键导出记账数据
+- 💾 **本地存储**：数据保存在浏览器，无需登录
 
-## 安装
+## 使用方法
 
-```bash
-cd bookkeeping
-pip install -r requirements.txt
-```
-
-## 使用
-
-```bash
-# 添加一笔支出
-python main.py add --type expense --amount 25.5 --category 餐饮 --remark 午饭
-
-# 添加一笔收入
-python main.py add --type income --amount 8000 --category 工资 --remark 月薪
-
-# 查看所有记录
-python main.py list
-
-# 查看统计汇总
-python main.py summary
-
-# 按月份统计
-python main.py summary --month 2026-09
-
-# 删除记录
-python main.py delete --id 3
-
-# 导出 CSV
-python main.py export --output records.csv
-```
+直接用浏览器打开 `index.html` 即可使用，无需安装任何依赖。
 
 ## 技术栈
 
-- Python 3.8+
-- 无外部依赖（标准库实现）
+- HTML5 + CSS3 + 原生 JavaScript
+- localStorage 数据持久化
+- 响应式设计，支持手机和桌面
 
 ## License
 
